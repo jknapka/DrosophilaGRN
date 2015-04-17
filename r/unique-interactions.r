@@ -1,3 +1,5 @@
+# Compute input to CPX2 for detecting unique interactions.
+
 args <- commandArgs(trailingOnly=TRUE)
 print(args)
 
