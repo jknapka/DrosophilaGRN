@@ -6,33 +6,42 @@ interactionFile = "data/interactions-present-in-data.txt"
 dat = read.csv('data/Table-S1-discrete-3.csv',stringsAsFactors=FALSE)
 interactions = read.table(interactionFile,header=FALSE,sep=",",stringsAsFactors=FALSE)
 
-#classPattern = args[1]
-classPattern = "R1"
+# The pattern (regexp) that determines which columns we
+# will pool against all other columns.
+classPattern = args[1]
 
+# Mitigate the maddening bizarreness of R's string
+# handling facilities.
 appendToAString = function(s,obj) {
     result = paste(s,as.character(obj),sep="",collapse="")
     return(result)
 }
 
+# Build a TRAJECTORY_VER2 string describing the network
+# trajectory among the given data rows. Rows are gene
+# IDs, columns are experimental conditions, timesteps, etc.
 buildTrajectory = function(rows) {
-    result = "TRAJECTORY_V2\n"
+    result = "TRAJECTORY_VER2\n"
     result = appendToAString(result,"1 2 0\n")
-    result = appendToAString(result,"2\t2\n")
+    result = appendToAString(result,"3\t3\n")
     result = appendToAString(result,rows[1,1])
     result = appendToAString(result,"\t")
     result = appendToAString(result,rows[2,1])
     result = appendToAString(result,"\n")
+    result = appendToAString(result,"\n")
     result = appendToAString(result,ncol(rows)-1)
     result = appendToAString(result,"\n")
     for (col in 2:ncol(rows)) {
-        result = appendToAString(result,rows[1,col])
+        result = appendToAString(result,rows[1,col]-1)
         result = appendToAString(result,"\t")
-        result = appendToAString(result,rows[2,col])
+        result = appendToAString(result,rows[2,col]-1)
         result = appendToAString(result,"\n")
     }
     return(result)
 }
 
+# Select the columns that match or do not match a
+# particular regexp.
 selectClass = function(df,fbgns,colPattern,complement=FALSE) {
     result1 = df[df[,2] == fbgns[1],c(2,grep(colPattern,names(df),invert=complement))]
     result2 = df[df[,2] == fbgns[2],c(2,grep(colPattern,names(df),invert=complement))]
@@ -42,6 +51,7 @@ selectClass = function(df,fbgns,colPattern,complement=FALSE) {
     return(result)
 }
 
+# Compute the filename to which a trajectory will be written.
 trajectoryFname = function(fbgns,colPattern,complement=FALSE) {
     fName = paste(fbgns,collapse="-",sep="-")
     patPart = colPattern
@@ -52,8 +62,11 @@ trajectoryFname = function(fbgns,colPattern,complement=FALSE) {
     fName = paste(fName,".trj",collapse="",sep="")
 }
 
+# Root of the project tree - BAD! Don't hard-code this,
+# use an environment variable.
 projRoot = "/home/jk/JKSync/jk/BINF/5353/GRNs"
 
+# Write a trajectory to a file.
 writeTrajectory = function(tStr,dirName,tFname) {
     mainDir = paste(projRoot,"/work",collapse="",sep="")
     subDir = dirName
@@ -71,6 +84,7 @@ writeTrajectory = function(tStr,dirName,tFname) {
     setwd(file.path(mainDir,".."))
 }
 
+# Process all interactions.
 for (ii in 1:nrow(interactions)) {
     vinter = as.character(interactions[ii,])
     cat(paste(c("Processing interaction ",vinter,"\n"),sep=" ",collapse=" "))
