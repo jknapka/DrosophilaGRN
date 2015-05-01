@@ -50,8 +50,11 @@ fi
 CPX2_NOTHING=10
 OUT_FILE=${PROJ_DIR}/out/${TDIR_LEAF}.out
 if [ -e ${OUT_FILE} ] ; then rm -f ${OUT_FILE} ; fi
+
+echo Relation,FBidA,FBidB,Celltype
 for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
-    #echo $ff : Comparing ${T2FILES[$ff]} vs ${T2FILES[$ff]}
+    T2FILES[$ff]=${TDIR}/$(basename ${T1FILES[$ff]} "${TDIR_LEAF}.trj")__X__${TDIR_LEAF}.trj
+    #echo $ff : Comparing ${T1FILES[$ff]} vs ${T2FILES[$ff]}
     declare -a CPX2_OUT
     CPX2_OUT=()
     nn=0
@@ -60,20 +63,27 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
         (( ++nn ))
     done < <(${PROJ_DIR}/bin/CPX2-linux -M comparison  -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]})
     if [ ${#CPX2_OUT[*]} -gt ${CPX2_NOTHING} ] ; then
+        FBIDS="$(basename ${T1FILES[$ff]} .trj | tr - , )"
         if grepElement CONSERVED "$(echo ${CPX2_OUT[@]})" ; then
             echo "############################################" >> $OUT_FILE
-            echo  $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
-            echo "############################################" >> $OUT_FILE
+            echo CONSERVED,$FBIDS
+            echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
             echo "!!!CONSERVED" >> $OUT_FILE
+            echo "############################################" >> $OUT_FILE
+            echo "" >> $OUT_FILE
+            echo "" >> $OUT_FILE
         else
-            echo GOT ONE: ${T1FILES[$ff]}
-
+            REL_TYPE=RELATIVE
+            if grepElement ABSOLUTE "$(echo ${CPX2_OUT[@]})" ; then
+                REL_TYPE=ABSOLUTE
+            fi
+            echo ${REL_TYPE}_DIFFERENTIAL,$FBIDS
             echo "############################################" >> $OUT_FILE
-            echo  $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
-            echo "############################################" >> $OUT_FILE
+            echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
             for (( ii=0; $ii<${#CPX2_OUT[*]}; ++ii )) ; do
                 echo ${CPX2_OUT[$ii]} >> $OUT_FILE
             done
+            echo "############################################" >> $OUT_FILE
             echo "" >> $OUT_FILE
             echo "" >> $OUT_FILE
         fi

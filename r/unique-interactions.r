@@ -1,5 +1,7 @@
 # Compute input to CPX2 for detecting unique interactions.
 
+if (!exists("util.util",mode="function")) source("r/grn_util.r")
+
 args <- commandArgs(trailingOnly=TRUE)
 print(args)
 
@@ -55,7 +57,9 @@ selectClass = function(df,fbgns,colPattern,complement=FALSE) {
 
 # Compute the filename to which a trajectory will be written.
 trajectoryFname = function(fbgns,colPattern,complement=FALSE) {
-    fName = paste(fbgns,collapse="-",sep="-")
+    geneNames = c(gname(fbgns[1,1]),gname(fbgns[1,2]))
+    cat("Gene names for ",fbgns[1,1],fbgns[1,2]," = ",geneNames[1],geneNames[2],"\n")
+    fName = paste(geneNames,collapse="-",sep="-")
     patPart = colPattern
     if (complement) {
         patPart = paste("__X__",patPart,collapse="",sep="")
@@ -101,5 +105,4 @@ for (ii in 1:nrow(interactions)) {
 }
 
 cat("Done with the loop")
-
 
