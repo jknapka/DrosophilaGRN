@@ -1,12 +1,14 @@
 # Source the setup.sh script before running this.
 
 # Run all the comparisons in a given directory.
-# arg[0] is the name of the directory containing the
-# trajectory files, under work, such as "R1" if the
-# directory is work/R1. Each trajectory file whose
+# arg[0] is the name of the directory under work/
+# that contains the # trajectory files, such as "R1"
+# if the directory is work/R1. Each trajectory file whose
 # name fits the pattern FBgbX-FBgnY-arg[0].trj will
 # be compared with the dual trajectory file named
-# FBgnX-FBgnY-__X__arg[0].trj,
+# FBgnX-FBgnY-__X__arg[0].trj. When CPX2 outputs
+# "interesting" (non-conserved) results, those
+# results are written to out/arg[0].out
 
 TDIR_LEAF=$1
 TDIR=${PROJ_DIR}/work/${TDIR_LEAF}

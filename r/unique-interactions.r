@@ -1,4 +1,26 @@
 # Compute input to CPX2 for detecting unique interactions.
+#
+# A single command-line argument is expected, which specifies
+# a pattern (regular expression) to look for in column names.
+# All columns that match the pattern will be pooled together;
+# all the columns that do not match the pattern will pooled
+# together in a second pool.
+#
+# Each two-gene interaction present in the Dutta dataset
+# will be analyzed.
+#
+# For each interaction, the two pools described above are
+# built. Trajectory files suitable for input to CPX2 are
+# then written for each pool. The trajectory files are
+# written to a subdirectory of ./work having the same
+# name as the pattern given on the command line. The
+# file names will be of the form
+#
+#  gene1-gene2-pattern.trj for the pattern pool;
+#  gene1-gene2-__X__pattern.trj for the anti-pattern pool.
+#
+# A separate script runs CPX2 on the trajectory files
+# and analyzes the output.
 
 if (!exists("util.util",mode="function")) source("r/grn_util.r")
 
