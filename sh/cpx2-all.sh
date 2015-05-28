@@ -13,6 +13,9 @@
 TDIR_LEAF=$1
 TDIR=${PROJ_DIR}/work/${TDIR_LEAF}
 
+PMODE=3
+if [ ! "" == "$2" ] ; then PMODE=$2 ; fi
+
 grepElement() {
     local e
     for e in "${@:2}"; do 
@@ -60,10 +63,15 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
     declare -a CPX2_OUT
     CPX2_OUT=()
     nn=0
+
+    # Accmuluate glnsp output into the CPX2_OUT array.
     while read line ; do
         CPX2_OUT[$nn]="$line"
         (( ++nn ))
-    done < <(${PROJ_DIR}/bin/CPX2-linux -M comparison  -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]})
+    done < <(${PROJ_DIR}/bin/glnsp -M comparison -P $PMODE -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]})
+
+    # If there is more output than the "no significant results" boilerplate,
+    # grep the array for the relationships of interest.
     if [ ${#CPX2_OUT[*]} -gt ${CPX2_NOTHING} ] ; then
         FBIDS="$(basename ${T1FILES[$ff]} .trj | tr - , )"
         if grepElement CONSERVED "$(echo ${CPX2_OUT[@]})" ; then

@@ -69,7 +69,7 @@ for ((gg=0; $gg<${nI1GENES}; ++gg)) ; do
         CPX2_OUT[$nn]="$line"
         (( ++nn ))
     #done < <(echo Nothing to see here.)
-    done < <(${PROJ_DIR}/bin/CPX2-linux -M comparison  -p 1 -g 1 -K 0 -J 0 -T tflist.txt)
+    done < <(${PROJ_DIR}/bin/glnsp -M comparison  -p 1 -g 1 -K 0 -J 0 -T tflist.txt)
     if [ ${#CPX2_OUT[*]} -gt ${CPX2_NOTHING} ] ; then
         FBIDS="${G1},${G2}"
         if grepElement CONSERVED "$(echo ${CPX2_OUT[@]})" ; then
