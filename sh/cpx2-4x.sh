@@ -62,17 +62,13 @@ for ((gg=0; $gg<${nI1GENES}; ++gg)) ; do
     echo "PERFORMING ANALYSIS ON TRAJECTORIES:"
     cat tflist.txt
 
-    declare -a CPX2_OUT
-    CPX2_OUT=()
-    nn=0
-    while read line ; do
-        CPX2_OUT[$nn]="$line"
-        (( ++nn ))
-    #done < <(echo Nothing to see here.)
-    done < <(${PROJ_DIR}/bin/glnsp -M comparison  -p 1 -g 1 -K 0 -J 0 -T tflist.txt)
-    if [ ${#CPX2_OUT[*]} -gt ${CPX2_NOTHING} ] ; then
+    TEMP_FILE=$(tempfile -d .)
+    ${PROJ_DIR}/bin/glnsp -M comparison  -p 1 -g 1 -K 0 -J 0 -T tflist.txt > $TEMP_FILE 2>&1
+    if [ $(wc -l ${TEMP_FILE} | awp '{print $1}'} -gt ${CPX2_NOTHING} ] ; then
         FBIDS="${G1},${G2}"
-        if grepElement CONSERVED "$(echo ${CPX2_OUT[@]})" ; then
+        PVALS=($(egrep -o "p[a-z]+=[0-9.e-]+" ${TEMP_FILE} | egrep -o "[-.0-9e]+" | tr \  ,))
+        PVALS=$(echo ${PVALS[@]} | tr \  ,)
+        if grep -q CONSERVED ${TEMP_FILE} ; then
             echo "############################################" >> $OUT_FILE
             echo CONSERVED,$FBIDS
             echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
@@ -82,7 +78,7 @@ for ((gg=0; $gg<${nI1GENES}; ++gg)) ; do
             echo "" >> $OUT_FILE
         else
             REL_TYPE=RELATIVE
-            if grepElement ABSOLUTE "$(echo ${CPX2_OUT[@]})" ; then
+            if grep -q ABSOLUTE ${TEMP_FILE} ; then
                 REL_TYPE=ABSOLUTE
             fi
             echo ${REL_TYPE}_DIFFERENTIAL,$FBIDS
