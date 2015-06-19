@@ -1,0 +1,12 @@
+Relations to simulate:
+
+) A -> B, linear
+) A -> B, sigmoid
+) A -> B, binary
+) A -> B, parabolic
+) A -> B, linear suppression
+) A -> B, sigmoid suppression
+) A -> B, binary suppression
+) A -> B, parabolic suppression
+) A -> B, linear; C -> B, linear suppression
+) A -> B, 
