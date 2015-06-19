@@ -18,6 +18,8 @@ grepElement() {
     return 1
 }
 
+PMODE=3
+if [ "$1" != "" ] ; then PMODE=$1 ; fi
 
 nn=0
 declare -a I1GENES
@@ -44,7 +46,7 @@ if [ ! $nI1GENES -eq $nI2GENES ] ; then
 fi
 
 CPX2_NOTHING=10
-OUT_FILE=${PROJ_DIR}/out/4way-by-cell-type.out
+OUT_FILE=${PROJ_DIR}/out/4way-by-cell-type-P${PMODE}.out
 if [ -e ${OUT_FILE} ] ; then rm -f ${OUT_FILE} ; fi
 
 echo Relation4,FBidA,FBidB
@@ -59,31 +61,33 @@ for ((gg=0; $gg<${nI1GENES}; ++gg)) ; do
         echo work/${CT}/${G1}-${G2}-${CT}.trj >> tflist.txt
     done
 
-    echo "PERFORMING ANALYSIS ON TRAJECTORIES:"
-    cat tflist.txt
+    echo "PERFORMING ANALYSIS ON TRAJECTORIES:" >> $OUT_FILE
+    cat tflist.txt >> $OUT_FILE
 
     TEMP_FILE=$(tempfile -d .)
-    ${PROJ_DIR}/bin/glnsp -M comparison  -p 1 -g 1 -K 0 -J 0 -T tflist.txt > $TEMP_FILE 2>&1
-    if [ $(wc -l ${TEMP_FILE} | awp '{print $1}'} -gt ${CPX2_NOTHING} ] ; then
+    ${PROJ_DIR}/bin/glnsp -M comparison -P ${PMODE}  -p 1 -g 1 -K 0 -J 0 -T tflist.txt > $TEMP_FILE 2>&1
+    if [ $(wc -l ${TEMP_FILE} | awk '{print $1}' ) -gt ${CPX2_NOTHING} ] ; then
         FBIDS="${G1},${G2}"
         PVALS=($(egrep -o "p[a-z]+=[0-9.e-]+" ${TEMP_FILE} | egrep -o "[-.0-9e]+" | tr \  ,))
         PVALS=$(echo ${PVALS[@]} | tr \  ,)
         if grep -q CONSERVED ${TEMP_FILE} ; then
             echo "############################################" >> $OUT_FILE
             echo CONSERVED,$FBIDS
-            echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
-            echo "!!!CONSERVED" >> $OUT_FILE
+            echo "!!!CONSERVED ${FBIDS}" >> $OUT_FILE
+            cat ${TEMP_FILE} >> ${OUT_FILE}
             echo "############################################" >> $OUT_FILE
             echo "" >> $OUT_FILE
             echo "" >> $OUT_FILE
-        else
+        fi
+        if grep -q DIFFERENTIAL ${TEMP_FILE} ; then
             REL_TYPE=RELATIVE
             if grep -q ABSOLUTE ${TEMP_FILE} ; then
                 REL_TYPE=ABSOLUTE
             fi
             echo ${REL_TYPE}_DIFFERENTIAL,$FBIDS
             echo "############################################" >> $OUT_FILE
-            echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
+            echo ${REL_TYPE}_DIFFERENTIAL,$FBIDS >> $OUT_FILE
+            cat ${TEMP_FILE} >> ${OUT_FILE}
             for (( ii=0; $ii<${#CPX2_OUT[*]}; ++ii )) ; do
                 echo ${CPX2_OUT[$ii]} >> $OUT_FILE
             done
@@ -92,5 +96,6 @@ for ((gg=0; $gg<${nI1GENES}; ++gg)) ; do
             echo "" >> $OUT_FILE
         fi
     fi
+    rm ${TEMP_FILE}
 done
 

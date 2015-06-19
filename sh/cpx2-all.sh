@@ -53,7 +53,7 @@ if [ ! $nT1FILES -eq $nT2FILES ] ; then
 fi
 
 CPX2_NOTHING=10
-OUT_FILE=${PROJ_DIR}/out/${TDIR_LEAF}.out
+OUT_FILE=${PROJ_DIR}/out/${TDIR_LEAF}-P${PMODE}.out
 if [ -e ${OUT_FILE} ] ; then rm -f ${OUT_FILE} ; fi
 
 echo Relation,FBidA,FBidB,Celltype,pd,pc,pt,pz\(1\),pz\(2\)
@@ -71,14 +71,31 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
     # If there is more output than the "no significant results" boilerplate,
     # grep the array for the relationships of interest.
     if [  $(wc -l ${TEMP_FILE} | awk '{print $1}') -gt ${CPX2_NOTHING} ] ; then
+        echo ================================================================= >> ${OUT_FILE}
+        echo $ff : Comparing ${T1FILES[$ff]} vs ${T2FILES[$ff]} >> ${OUT_FILE}
+        echo ${PROJ_DIR}/bin/glnsp -M comparison -P $PMODE -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]} \> ${TEMP_FILE} 2\>\&1 >> ${OUT_FILE}
+        echo ================================================================= >> ${OUT_FILE}
         FBIDS="$(basename ${T1FILES[$ff]} .trj | tr - , )"
         PVALS=($(egrep -o "p[a-z]+=[0-9.e-]+" ${TEMP_FILE} | head -5 | egrep -o "[-.0-9e]+" | tr \  ,))
         PVALS=$(echo ${PVALS[@]} | tr \  ,)
+
+        echo "" >> ${OUT_FILE}
+        echo TRAJECTORIES: >> ${OUT_FILE}
+        echo T1: >> ${OUT_FILE}
+        cat ${T1FILES[$ff]} >> ${OUT_FILE}
+        echo T2: >> ${OUT_FILE}
+        cat ${T2FILES[$ff]} >> ${OUT_FILE}
+        echo END TRAJECTORIES >> ${OUT_FILE}
+        echo "" >> ${OUT_FILE}
+
         if grep -q CONSERVED ${TEMP_FILE} ; then
             echo CONSERVED,$FBIDS,$PVALS
             echo "############################################" >> $OUT_FILE
             echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
             echo "!!!CONSERVED" >> $OUT_FILE
+            echo BEGIN GLNSP OUTPUT >> $OUT_FILE
+            cat ${TEMP_FILE} >> ${OUT_FILE}
+            echo END GLNSP OUTPUT >> $OUT_FILE
             echo "############################################" >> $OUT_FILE
             echo "" >> $OUT_FILE
             echo "" >> $OUT_FILE
@@ -90,7 +107,9 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
             echo ${REL_TYPE}_DIFFERENTIAL,$FBIDS,$PVALS
             echo "############################################" >> $OUT_FILE
             echo  @@@@ $(basename ${T1FILES[$ff]})   VS  $(basename ${T2FILES[$ff]}) >> $OUT_FILE
-            echo cat ${TEMP_FILE} >> $OUT_FILE
+            echo BEGIN GLNSP OUTPUT >> $OUT_FILE
+            cat ${TEMP_FILE} >> $OUT_FILE
+            echo END GLNSP OUTPUT >> $OUT_FILE
             echo "############################################" >> $OUT_FILE
             echo "" >> $OUT_FILE
             echo "" >> $OUT_FILE
