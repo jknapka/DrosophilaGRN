@@ -4,6 +4,7 @@ from __future__ import print_function
 import re
 import sys
 import random
+import numpy.random as nrnd
 
 def valuesFromName(name):
     ''' Split a name like s0123 into a list of integer values
@@ -17,17 +18,17 @@ def valuesFromName(name):
     return values
 
 class Node:
-
+    ''' Represents a graph node. '''
     def __init__(self,name,levels,genes):
         self.name = name
-        self.vals = levels
+        self.levels = levels
         self.genes = genes
         self.edges = []
 
     def addTransition(self,destNode,kind):
         self.edges.append((destNode,kind))
 
-NODE_ORDER_RE = re.compile('nodeorder="(([^ ]+) ?)+"')
+NODE_ORDER_RE = re.compile('nodeorder="([^"]*)"')
 NODE_RE = re.compile('<node id="([^"]*)">')
 EDGE_RE = re.compile('<edge .* from="([^"]+)" to="([^"]+)">')
 
@@ -46,9 +47,9 @@ def parseGraph(lines):
         m = NODE_RE.search(line)
         if m is not None:
             print('Got NODE: %s'%line)
-            node = Node(m.group(1),valuesFromName(m.group(1)),node_order)
+            node = Node(m.group(1),valuesFromName(m.group(1)),node_order[:])
             nodes[node.name] = node
-            print('  node: %s [%s]'%(node.name,node.vals))
+            print('  node: %s [%s]'%(node.name,node.levels))
             continue
         m = EDGE_RE.search(line)
         if m is not None:
@@ -68,15 +69,167 @@ def pathFromNode(node,nPoints):
         path.append(node)
     return path
 
-def simFromNode(node,nPoints):
-    path = [node]
+def floatIdentity(x):
+    return float(x)
+
+def constantFn(x):
+    return lambda y: x
+
+def simFromNode(node,pathLen,nSamples,activationFns={'DEFAULT':floatIdentity},noiseFns={'DEFAULT': constantFn(0.5)}):
+    ''' Create a list of samples of gene activity along
+    a state path in the network starting at the given node.
+    Each sampling operation will generate an expression
+    level for each gene at a given node. '''
+    path = pathFromNode(node,pathLen)
+    return simForPath(path,nSamples)
+
+def simForPath(path,nSamples,activationFns={'DEFAULT':floatIdentity},noiseFns={'DEFAULT': constantFn(0.5)},randomize=False):
+
+    sampFn = doSample
+    if randomize:
+        sampFn = randomSample
+
+    # Figure out how many samples to take at each point.
+    # MOSTLY DONE: parameterize the relationship between activation
+    # levels and expression levels. This might differ for each
+    # gene so a map is required.
+    samplesPerPoint = nSamples / len(path)
+    extraSamples = nSamples % len(path)
+
+    sampleList = []
+
+    print("Samples per point: %s; extra samples %s"%(samplesPerPoint,extraSamples))
+
+    for nd in path:
+        for samp in range(samplesPerPoint):
+            sampleList = sampleList + sampFn(nd,samp,activationFns,noiseFns)
+        if extraSamples > 0:
+            sampleList = sampleList + sampFn(nd,samp+1,activationFns,noiseFns)
+            extraSamples -= 1
+
+    return sampleList
+
+def getFunctionForGene(gname,fmap):
+    fn = fmap.get(gname,None)
+    if fn is None:
+        fn = fmap.get('DEFAULT',None)
+        if fn is None:
+            fn = constantFn(-42)
+    return fn
+
+def doSample(node,replicate,activationFns,noiseFns):
+    ''' Sample all genes at the given node. '''
+    result = []
+    print("Sampling genes: %s"%(node.genes,))
+    for gidx in range(len(node.genes)):
+        gene = node.genes[gidx]
+
+        # Compose a sampler function from the activation and noise
+        # functions for the gene, or the default ones if no gene-
+        # specific ones are supplied.
+        sampler = lambda x: getFunctionForGene(gene,activationFns)(x) + getFunctionForGene(gene,noiseFns)(x)
+
+        level = node.levels[gidx]
+        sample = (gene,'%s_%s'%(node.name,replicate),max(sampler(level),0.0))
+        print("Adding sample: %s"%(sample,))
+        result.append(sample)
+
+    return result
+
+def randomSample(node,replicate,activationFns,noiseFns):
+    result = []
+    print("Randomly sampling genes: %s"%(node.genes,))
+    for gidx in range(len(node.genes)):
+        gene = 'RG%s'%random.randint(0,10000000) 
+
+        # Compose a sampler function from the activation and noise
+        # functions for the gene, or the default ones if no gene-
+        # specific ones are supplied.
+        sampler = lambda x: getFunctionForGene(gene,activationFns)(x) + getFunctionForGene(gene,noiseFns)(x)
+
+        level = node.levels[random.randint(0,len(node.genes)-1)]
+        sample = (gene,'%s_%s'%(node.name,replicate),max(sampler(level),0.0))
+        print("Adding sample: %s"%(sample,))
+        result.append(sample)
+
+    return result
+
+def linearActivation(factor):
+    def activation(level):
+        return level * factor
+    return activation
+
+def squareActivation(factor):
+    def activation(level):
+        return (level*level*factor)
+    return activation
+
+def expActivation(base,factor):
+    def activation(level):
+        return base**level * factor
+    return activation
+
+def normalNoise(scale):
+    def noise(x):
+        return nrnd.normal(scale=scale)
+    return noise
+
+def scaledNormalNoise(factor,scale):
+    def noise(x):
+        if x <= 0.0:
+            x = factor
+        return nrnd.normal(scale=x*scale/factor)
+    return noise
+
+def printSamples(samples):
+    genes = {}
+    conditions = {}
+    for (gene,condition,value) in samples:
+        genes[gene] = True
+        conditions[condition] = True
+    genes = genes.keys()
+    genes.sort()
+    conditions = conditions.keys()
+    conditions.sort()
+
+    condList = [None] * (1+len(conditions))
+    matrix = [None] * (1+len(genes))
+    for ii in range(len(matrix)):
+        matrix[ii] = condList[:]
+        if ii>0:
+            matrix[ii][0] = genes[ii-1]
+
+    matrix[0][0] = 'Gene\Condition'
+    matrix[0][1:] = conditions[:]
+
+    for (gene,condition,value) in samples:
+        geneIdx = [c[0] for c in matrix].index(gene)
+        condIdx = matrix[0].index(condition)
+        matrix[geneIdx][condIdx] = value
+
+    for line in matrix:
+        print(','.join(map(str,line)))
 
 if __name__ == '__main__':
     lines = open(sys.argv[1])
     nodes = parseGraph(lines)
     for node in nodes.values():
         print('node %s -> %s'%(node.name,[n.name for n in node.edges]))
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         pathLen = int(sys.argv[2])
         path = pathFromNode(nodes.values()[random.randint(0,len(nodes.values())-1)],pathLen)
         print('path: %s'%([node.name for node in path],))
+
+        activationFns = {'DEFAULT':squareActivation(3.0)}
+        noiseFns = {'DEFAULT':scaledNormalNoise(3.0,10.0) }
+
+        samples = simForPath(path,8,activationFns,noiseFns)
+        print('%s samples: %s'%(len(samples),samples,))
+
+        if len(sys.argv)>3:
+            nRandom = int(sys.argv[3])
+            samples = samples + simForPath(path,8,activationFns,noiseFns,randomize=True)
+
+        printSamples(samples)
+
+
