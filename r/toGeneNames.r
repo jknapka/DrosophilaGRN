@@ -1,6 +1,11 @@
 args <- commandArgs(trailingOnly=TRUE)
 
-inDat <- read.csv(args[1],stringsAsFactors=FALSE,header=FALSE)
+print(args)
+print(args[1])
+fname <- args[1]
+print(fname)
+
+inDat <- read.csv(fname,stringsAsFactors=FALSE,header=FALSE)
 
 gnameFile <- 'data/Dutta_FlyBase_IDs.txt'
 gnameTab <- read.csv(gnameFile,sep='\t',stringsAsFactors=FALSE)

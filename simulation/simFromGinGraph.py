@@ -6,6 +6,40 @@ import sys
 import random
 import numpy.random as nrnd
 
+def houseNoise(y,y1,theta,Q):
+    y,y1,theta,Q = map(float,(y,y1,theta,Q))
+    if y != y1:
+        return ( (1.0 - ((abs( y1-y ) )/( sum( [abs(d-y) for d in range(int(Q))] ) ) ) ) * (theta / (Q-1.0)) ) * (1.0 - theta) + theta/Q
+    else:
+        return ((theta/(Q-1.0)) +1.0 -theta) * (1.0 - theta) + (theta/Q)
+
+def houseNoiseDistribution(y,theta,Q):
+    ''' Build a probability distribution for the possible
+    values of y1 between 0 and Q-1, given the value y,
+    the noise level = theta, and the number of levels of
+    y = Q '''
+    dist = [houseNoise(y,y1,theta,Q) for y1 in range(Q)]
+    #error = sum(dist) - 1.0
+    #error = error / float(Q)
+    #dist = map(lambda x: x-error,dist)
+    return dist
+
+def applyHouseNoise(y,theta,Q):
+    ''' Build the probability distribution for y based on 
+    the house noise model and the given value of Y, and
+    return the new y with noise applied. '''
+    dist = houseNoiseDistribution(y,theta,Q)
+    accum = 0.0
+    choice = random.random()
+    for y1 in range(Q):
+        accum += dist[y1]
+        if accum >= choice:
+            return y1
+    # We should never get here, but if we do,
+    # we should return Q-1.
+    print("UNEXPECTED: choice value %s > sum of discrete distribution %s."%(choice,sum(dist)))
+    return Q-1
+
 def valuesFromName(name):
     ''' Split a name like s0123 into a list of integer values
     like [0,1,2,3] '''
@@ -211,6 +245,10 @@ def printSamples(samples):
         print(','.join(map(str,line)))
 
 if __name__ == '__main__':
+    if sys.argv[1] == 'noiseTest':
+        dist = houseNoiseDistribution(int(sys.argv[2]),float(sys.argv[4]),int(sys.argv[3]))
+        print("House noise distribution: %s sums to %s"%(dist,sum(dist)))
+        sys.exit(0)
     lines = open(sys.argv[1])
     nodes = parseGraph(lines)
     for node in nodes.values():

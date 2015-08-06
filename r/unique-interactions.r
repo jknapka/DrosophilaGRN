@@ -29,7 +29,13 @@ print(args)
 
 interactionFile = "data/interactions-present-in-data.txt"
 
-dat = read.csv('data/Table-S1-discrete-3.csv',stringsAsFactors=FALSE)
+if (length(args) > 1) {
+    inFile = args[2]
+} else {
+    inFile = 'data/Table-S1-discrete-3.csv'
+}
+
+dat = read.csv(inFile,stringsAsFactors=FALSE)
 interactions = read.table(interactionFile,header=FALSE,sep=",",stringsAsFactors=FALSE)
 
 # The pattern (regexp) that determines which columns we

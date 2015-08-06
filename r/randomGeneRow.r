@@ -3,15 +3,17 @@ if (!exists("util.util",mode="function")) {
     source("r/grn_util.r")
 }
 
-geneStats = read.csv('data/geneStats.csv',sep=",",header=TRUE)
+geneStats = read.csv('data/geneStats.csv',sep=",",header=TRUE,stringsAsFactors=FALSE)
+interactionList = read.csv('data/interactions-present-in-data.txt',sep=',',header=FALSE,stringsAsFactors=FALSE)
 
-randomGeneRow = function(n) {
-    result = emptyRow()
+randomGeneRow = function(n,replicates) {
+    result = emptyRow(replicates)
 
     # First, pick a gene.
-    genes = levels(geneStats[,'gene'])
+    genes = geneStats[,'fbid']
+    genes = unique(genes)
     gene = sample(genes,1)
-    grows = geneStats[geneStats[,'gene']==gene,]
+    grows = geneStats[geneStats[,'fbid']==gene,]
 
     geneNm = paste("FBid100",n,sep="",collapse="")
     cgNum = paste("CG10",n,sep="",collapse="")
@@ -20,78 +22,36 @@ randomGeneRow = function(n) {
     result[1,3] = geneNm
     
     glevs = grows[,'level']
-    # We need 20 pairs of random samples.
+    # We need 20 replicate-tuples of random samples.
     for (ss in 1:20) {
-        # Pick a level.
-        glev = sample(glevs,1)
-        grow = grows[grows[,'level']==glev,]
-        for (gss in 1:2) {
+        for (gss in 1:replicates) {
+            # Pick a level.
+            glev = sample(glevs,1)
+            grow = grows[grows[,'level']==glev,]
             mean = grow[,'mean']
             sdev = grow[,'sd']
+            gmin = grow[,'min']
+            gmax = grow[,'max']
             if (is.na(sdev) || is.nan(sdev)) {
                 #print("CHANGING NaN sdev to 0.001")
                 sdev = 0.001
             }
-            expVal = rnorm(1,mean,sdev)
-            if (is.nan(expVal)) {
-                cat("NaN for ",as.character(grow)," mean=",mean," sd=",sdev,"\n")
-            }
-            result[1,2*(ss-1)+gss+3] = expVal
+
+            # Hmm. MANY significant interactions using this.
+            # Maybe try just pure randomness...
+            expVal = runif(1,gmin,gmax)
+
+            #expVal = rnorm(1,mean,sdev)
+            #if (expVal < 0) expVal = 0
+
+            # This gives about 5% conserved interactions. Hmmm.
+            #expVal = runif(1,0.0,10000.0)
+
+            result[1,replicates*(ss-1)+gss+3] = expVal
         }
     }
 
     return(result)
-}
-
-emptyRow = function() {
-    nr = 0
-    outTab <- data.frame(FBgn = rep("",nr),
-                         GNum = rep("",nr),
-                         GName = rep("",nr),
-                         EC_R1_1 = rep(NA,nr),
-                         EC_R1_2 = rep(NA,nr),
-                         EC_R2_1 = rep(NA,nr),
-                         EC_R2_2 = rep(NA,nr),
-                         EC_R3_1 = rep(NA,nr),
-                         EC_R3_2 = rep(NA,nr),
-                         EC_R4_1 = rep(NA,nr),
-                         EC_R4_2 = rep(NA,nr),
-                         EC_R5_1 = rep(NA,nr),
-                         EC_R5_2 = rep(NA,nr),
-                         EB_R1_1 = rep(NA,nr),
-                         EB_R1_2 = rep(NA,nr),
-                         EB_R2_1 = rep(NA,nr),
-                         EB_R2_2 = rep(NA,nr),
-                         EB_R3_1 = rep(NA,nr),
-                         EB_R3_2 = rep(NA,nr),
-                         EB_R4_1 = rep(NA,nr),
-                         EB_R4_2 = rep(NA,nr),
-                         EB_R5_1 = rep(NA,nr),
-                         EB_R5_2 = rep(NA,nr),
-                         EE_R1_1 = rep(NA,nr),
-                         EE_R1_2 = rep(NA,nr),
-                         EE_R2_1 = rep(NA,nr),
-                         EE_R2_2 = rep(NA,nr),
-                         EE_R3_1 = rep(NA,nr),
-                         EE_R3_2 = rep(NA,nr),
-                         EE_R4_1 = rep(NA,nr),
-                         EE_R4_2 = rep(NA,nr),
-                         EE_R5_1 = rep(NA,nr),
-                         EE_R5_2 = rep(NA,nr),
-                         ISC_R1_1 = rep(NA,nr),
-                         ISC_R1_2 = rep(NA,nr),
-                         ISC_R2_1 = rep(NA,nr),
-                         ISC_R2_2 = rep(NA,nr),
-                         ISC_R3_1 = rep(NA,nr),
-                         ISC_R3_2 = rep(NA,nr),
-                         ISC_R4_1 = rep(NA,nr),
-                         ISC_R4_2 = rep(NA,nr),
-                         ISC_R5_1 = rep(NA,nr),
-                         ISC_R5_2 = rep(NA,nr),
-                         stringsAsFactors=FALSE)
-    colnames(outTab)[2] <- "CG number"
-    colnames(outTab)[3] <- "Gene ID" 
-    return(outTab)
 }
 
 generateRandomRows <- function(nGenes) {
@@ -107,19 +67,185 @@ generateRandomRows <- function(nGenes) {
     return(result)
 }
 
-fillDataTable <- function(outFile) {
-    tab = read.csv('data/Table-S1.csv')
+fillDataTable <- function(outFile,replicates) {
+    tab = read.csv('data/Table-S1.csv')[,1:3]
+    nr = nrow(tab)
+    shape = emptyRow(replicates)
+    for (col in colnames(shape)[-1:-3]) {
+        tab[[col]] = numeric(nr)
+    }
     for (ss in 1:nrow(tab)) {
-        rr = randomGeneRow(0)
+        rr = randomGeneRow(0,replicates)
         tab[ss,-1:-3] = rr[1,-1:-3]
     }
-    write.csv(tab,outFile,row.names=FALSE)
+    write.csv(tab,outFile,row.names=FALSE,quote=FALSE)
 }
 
+# This injects full data rows generated by some other means,
+# eg makeDifferentialRow.py.
+injectData <- function(dataFile,outFile,newRowFiles) {
+    dat = read.csv(dataFile,sep=",",header=TRUE,stringsAsFactors=FALSE)
+    for (rfile in newRowFiles) {
+        rows = read.csv(rfile,,sep=",",header=TRUE,stringsAsFactors=FALSE)
+        dat[dat[,1]==rows[1,1],-1:-3] = rows[1,-1:-3]
+        dat[dat[,1]==rows[2,1],-1:-3] = rows[2,-1:-3]
+    }
+    write.csv(dat,outFile,row.names=FALSE,quote=FALSE)
+}
+
+# This injects simulated data generated here according to a plan
+# expressed as a table with the following columns:
+#
+# cellType: string - EB,EE,EC, or ISC.
+# level: integer - the discrete level of the "source" gene involved in the interaction.
+# maxlevel: integer - the maximum possible value of level. This is needed because
+#    sometimes we won't utilize the entire range of the source gene, and we need
+#    to figure out how to map level to the actual source gene's level range.
+# tlevel: integer - the discrete level of the "target" gene involved in the interaction.
+# maxtlevel: integer - the maximum possible value of tlevel.
+# noise: float - the house noise level to apply to tlevel, 0.0 .. 1.0
+#
+# We choose source and target genes at random, and write the chosen FBids to
+# standard output as comma-separated pairs. The level and tlevel values
+# are mapped into the actual number of quantized levels expressed by the
+# selected genes, using maxlevel and maxtlevel to establish the appropriate ranges.
+# 
+# This is a pretty redundant format, but it's nice for R usage since we
+# can easily read it into a data.frame.
+injectData2 <- function(dataFile,outFile,simFiles) {
+    cat("injectData2\n")
+    dat = read.csv(dataFile,sep=",",header=TRUE,stringsAsFactors=FALSE)
+    cat("read",dataFile,'\n')
+
+    interactions = data.frame(fbid1=NULL,fbid2=NULL)
+
+    for (sfile in simFiles) {
+        simRows = read.csv(sfile,sep=',',header=TRUE,stringsAsFactors=FALSE)
+        cat("Processing",sfile,'\n')
+        #colnames(simRows) <- c('cellType','level','maxlevel','tlevel','maxtlevel','noise')
+        iRow = randomInteraction()
+        g1 = iRow[1,1]
+        g2 = iRow[1,2]
+        #cat("inject2 chose random genes",g1,g2,'\n')
+        interactions = rbind(interactions,list(g1,g2))
+        nreps = floor(ncol(dat))/20
+        for (cellType in c('EC','EE','EB','ISC')) {
+            for (region in c('R1','R2','R3','R4','R5')) {
+                for (rep in 1:nreps) {
+                    colName = paste(cellType,'_',region,'_',rep,sep='',collapse='')
+                    cat("  sampling for column",colName,'\n')
+                    simCtRows = simRows[simRows[,'cellType']==cellType,]
+                    if (nrow(simCtRows) == 0) {
+                        simCtRows = simRows[simRows[,'cellType']=='OTHER',]
+                    }
+                    print("simCtRows")
+                    print(simCtRows)
+                    toSimulate = simCtRows[sample(1:nrow(simCtRows),1),]
+                    print("toSimulate")
+                    print(toSimulate)
+                    sLevel = scaleLevel(g1,toSimulate[1,'level'],toSimulate[1,'maxlevel'])
+                    tLevel = applyNoise(toSimulate[1,'tlevel'],toSimulate[1,'maxtlevel'],toSimulate[1,'noise'])
+                    tLevel = scaleLevel(g2,tLevel,toSimulate[1,'maxtlevel'])
+                    cat("    source level",g1,sLevel,"target level",g2,tLevel,'\n')
+
+                    x1 = randomExpression(g1,sLevel)
+                    x2 = randomExpression(g2,tLevel)
+                    cat("    source expression",x1,"target expression",x2,'\n')
+                    dat[dat[,1]==g1,colName] = x1
+                    dat[dat[,1]==g2,colName] = x2
+                }
+            }
+        }
+    } 
+    write.csv(dat,outFile,row.names=FALSE,quote=FALSE)
+
+    return(interactions)
+}
+
+# Scale level in the range 1..max into the corresponding level
+# in the actual range of gene gname (actually an FBid).
+scaleLevel <- function(gname,level,max) {
+    maxGlevel = max(geneStats[geneStats[,'fbid']==gname,'level'])
+    cat("scaling level",level,"of",max,"by gene",gname,"max level",maxGlevel,'\n')
+    return(round(1+((level-1)/(max-1))*(maxGlevel-1)))
+}
+
+# Compute the probability that level y will move to level y1
+# given number of levels Q and noise level theta 0.0 .. 1.0
+houseNoise <- function(y,y1,theta,Q) {
+    absDiff <-function(d) { return(abs(d-y)) }
+    absDiffs = sapply(FUN=absDiff,0:(Q-1))
+    if (y != y1) {
+        return (( (1.0 - ((abs( y1-y ) )/( sum( absDiffs ) ) ) ) * (theta / (Q-1.0)) ) * (1.0 - theta) + theta/Q)
+    } else {
+        return (((theta/(Q-1.0)) +1.0 -theta) * (1.0 - theta) + (theta/Q))
+    }
+}
+
+houseNoiseDistribution <- function(y,Q,theta) {
+    noise <- function(y1) {
+        return(houseNoise(y,y1,theta,Q))
+    }
+    return(sapply(FUN=noise,0:(Q-1)))
+}
+
+applyNoise <- function(l,Q,theta) {
+    cat("applying house noise",theta,"to",l,"of",Q,'\n')
+    hnd = houseNoiseDistribution(l-1,Q,theta)
+    cat("  distribution:",hnd,'\n')
+    result = sample(1:Q,1,prob=hnd)
+    cat("  result:",result,'\n')
+    return(result)
+}
+
+randomGene <- function() {
+    genes = unique(geneStats[,1])
+    #cat("genes",genes,'\n')
+    return(sample(genes,1))
+}
+
+randomInteraction <- function() {
+    return(interactionList[sample(1:nrow(interactionList),1),])
+}
+
+randomLevel <- function(gene) {
+    return(sample(geneStats[geneStats[1]==gene,3],1))
+}
+
+randomExpression <- function(gene,level=NULL) {
+    if (is.null(level)) {
+        level = randomLevel(gene)
+    }
+    #cat("randomExpression gene",gene,"level",level,'\n')
+    levelRow = geneStats[geneStats[,1]==gene,]
+    levelRow = levelRow[levelRow[,3]==level,]
+    #print("randomExpression levelRow")
+    #print(levelRow)
+    levelMin = levelRow[1,4]
+    levelMax = levelRow[1,6]
+    cat("choosing random level between",levelMin,"and",levelMax,'\n')
+    return(runif(1,levelMin,levelMax))
+}
 
 args <- commandArgs(trailingOnly=TRUE)
-fillDataTable(args[1])
-
+if (length(args) > 0) {
+    if (args[1] == 'gen') {
+        if (length(args) > 2) {
+            replicates = as.numeric(args[3])
+        } else {
+            replicates = 2
+        }
+        cat("Generating into",args[2],"\n")
+        fillDataTable(args[2],replicates)
+        cat("Done.\n")
+    }
+    if (args[1] == 'inject') {
+        cat("Injecting simulated interactions",args[-1:-3],"into",args[2],"and writing result as",args[3],"\n")
+        simulated_interactions = injectData2(args[2],args[3],args[-1:-3])
+        write.table(simulated_interactions,file=paste("simint-",args[3],sep='',collapse=''),sep=',',quote=FALSE,col.names=FALSE,row.names=FALSE)
+        cat("Done.")
+    }
+}
 if (FALSE) {
     print(generateRandomRows(as.numeric(args[1])))
 }
