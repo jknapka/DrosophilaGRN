@@ -1,3 +1,4 @@
+# Compute conserved interactions across the entire data set.
 require('Ckmeans.1d.dp')
 require('FunChisq')
 
@@ -10,18 +11,19 @@ args <- commandArgs(trailingOnly=TRUE)
 
 if (length(args) > 0) {
     inFile <- args[1]
-    gsFile <- paste(inFile,"-geneStats.csv",sep="",collapse="")
+    gsFile <- paste(substring(inFile,1,stringr::str_length(inFile)-4),"-geneStats.csv",sep="",collapse="")
     if (length(args) > 1) {
         simulated_interactions = read.csv(args[2],sep=',',header=FALSE)
     } else {
         simulated_interactions = NULL
     }
+
 } else {
-    inFile <- 'data/Table-S1.csv'
-    gsFile <- 'data/geneStats.csv'
+    inFile <- paste(PROJ_DIR,'/data/Table-S1.csv')
+    gsFile <- paste(PROJ_DIR,'/data/geneStats.csv')
     simulated_interactions = NULL
 }
-interactionFile <- 'data/interactions-present-in-data.txt'
+interactionFile <- paste(PROJ_DIR,'/data/interactions-present-in-data.txt')
 
 inTab <- read.csv(inFile,stringsAsFactors=FALSE)
 nr = nrow(inTab)
@@ -39,12 +41,14 @@ pThresh = 0.05
 # quantized level. If the expression values are 1.0, 100.0, 200.0,
 # we want that to correspond to three levels, not one.
 nClusters <- c(3,9)
-geneStats = data.frame(fbid=character(),gene=character(),level=numeric(),min=numeric(),mean=numeric(),max=numeric(),sd=numeric())
+geneStats = data.frame(fbnum=numeric(),fbid=character(),gene=character(),level=numeric(),min=numeric(),mean=numeric(),max=numeric(),sd=numeric())
 
 nReplicates = floor((ncol(inTab)-3)/20)
 outTab = emptyRow(nReplicates)
 
+fbCount = 0
 for (rr in 1:nr) {
+    fbCount = fbCount + 1
     gvec <- as.numeric(inTab[rr,-1:-3])
     fbid = inTab[rr,1]
     fbnm = gname(fbid)
@@ -62,7 +66,7 @@ for (rr in 1:nr) {
         lVals = gvec[cFlags == level]
         sts = summary(lVals)
         sdev = sd(lVals)
-        statRow = data.frame(fbid=fbid,gene=fbnm,level=level,min=sts['Min.'],mean=sts['Mean'],max=sts['Max.'],sd=sdev)
+        statRow = data.frame(fbnum=fbCount,fbid=fbid,gene=fbnm,level=level,min=sts['Min.'],mean=sts['Mean'],max=sts['Max.'],sd=sdev)
         geneStats = rbind(geneStats,statRow)
     }
     gName = inTab[rr,1]
@@ -79,10 +83,14 @@ colors.by.cellType = c(rep('blue',colsPerCellType),rep('green',colsPerCellType),
 colors.by.region = c(rep(c(rep('blue',nReplicates),rep('green',nReplicates),rep('black',nReplicates),rep('red',nReplicates),rep('orange',nReplicates)),4))
 symbols.by.region = c(rep(c(rep('1',nReplicates),rep('2',nReplicates),rep('3',nReplicates),rep('4',nReplicates),rep('5',nReplicates)),4))
 
-write.csv(outTab,paste(inFile,"-discrete-",nClusters[1],"-",nClusters[length(nClusters)],".csv",sep="",collapse=""))
+pthNm = pathAndName(inFile)
+pth = pthNm[1]
+nm = substring(pthNm[2],1,stringr::str_length(pthNm[2])-4)
+write.csv(outTab,paste(pth,'/',nm,"-discrete-",nClusters[1],"-",nClusters[length(nClusters)],".csv",sep="",collapse=""))
 
-row.names(geneStats) <- NULL
-write.csv(geneStats,gsFile,row.names=FALSE)
+geneStats = geneStats[order(geneStats[,'fbnum'],geneStats[,'level']),]
+geneStats = geneStats[,-1]
+write.csv(geneStats,gsFile,row.names=FALSE,col.names=TRUE)
 
 interactions = read.table(interactionFile,header=FALSE,sep=",",stringsAsFactors=FALSE)
 
@@ -161,8 +169,6 @@ interactions[['p.value']] <- p.values
 interactions[['BH.significant']] <- rep(FALSE,nrow(interactions))
 interactions[['simulated']] <- rep(FALSE,nrow(interactions))
 
-BH.alpha = 0.25
-
 if (!is.null(simulated_interactions)) {
     for (jj in 1:nrow(interactions)) {
         for (kk in 1:nrow(simulated_interactions)) {
@@ -173,17 +179,42 @@ if (!is.null(simulated_interactions)) {
         }
     }
 }
-sorted.interactions = interactions[order(interactions[,'p.value']),]
 
-for (jj in 1:nrow(sorted.interactions)) {
-    cat(jj,BH.alpha,nrow(sorted.interactions),sorted.interactions[jj,'p.value'],'<?',(jj*BH.alpha/nrow(sorted.interactions)),'\n')
-    if (sorted.interactions[jj,'p.value'] < (jj*BH.alpha/nrow(sorted.interactions))) {
-        sorted.interactions[jj,'BH.significant'] <- TRUE
-    }
+roc.data = data.frame(FDR=numeric(0),true.positives=numeric(0),true.proportion=numeric(0),false.positives=numeric(0),false.proportion=numeric(0))
+for (BH.alpha in c(0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) {
+    sorted.interactions = fdr_BH(interactions,BH.alpha=BH.alpha)
+
+    sorted.interactions[['n']] = 1:nrow(sorted.interactions)
+
+    print("Adjusted interaction significance:")
+    print(sorted.interactions)
+
+    pathParts = pathAndName(inFile)
+    baseDir = paste(pathParts[1],collapse='/',sep='/')
+    resultFile = paste(baseDir,'/','results.csv',collapse='',sep='')
+    write.table(sorted.interactions,file=resultFile,sep=',',quote=FALSE,col.names=TRUE,row.names=FALSE)
+
+    true.positives = nrow(sorted.interactions[sorted.interactions[,'BH.significant'] & sorted.interactions[,'simulated'],])
+    n.true = nrow(sorted.interactions[sorted.interactions[,'simulated'],])
+    false.positives = nrow(sorted.interactions[sorted.interactions[,'BH.significant'] & !sorted.interactions[,'simulated'],])
+    n.false = nrow(sorted.interactions)-n.true
+
+    pTrue = true.positives/n.true
+    pFalse = false.positives/n.false
+
+    cat("lengths: BH.alpha",length(BH.alpha),"true.positives",length(true.positives),"true.proportion",length(pTrue),
+        "false.positives",length(false.positives),"false.proportion",length(pFalse))
+    roc.row = list(FDR=BH.alpha,true.positives=true.positives,true.proportion=pTrue,false.positives=false.positives,false.proportion=pFalse)
+
+    print("trying to rbind")
+    print(roc.data)
+    print("   to")
+    print(roc.row)
+    flush.console()
+
+    roc.data = rbind(roc.data,roc.row)
 }
+write.table(roc.data,file=paste(baseDir,'/','rocdat.csv',sep='',collapse=''),sep=',',quote=FALSE,col.names=TRUE,row.names=FALSE)
 
-sorted.interactions[['n']] = 1:nrow(sorted.interactions)
-
-print("Ajusted interaction significance:")
-print(sorted.interactions)
+plotRocFromTable(roc.data)
 

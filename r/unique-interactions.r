@@ -22,17 +22,24 @@
 # A separate script runs CPX2 on the trajectory files
 # and analyzes the output.
 
-if (!exists("util.util",mode="function")) source("r/grn_util.r")
+if (!exists("util.util",mode="function")) {
+    source("r/grn_util.r")
+}
 
 args <- commandArgs(trailingOnly=TRUE)
 print(args)
 
-interactionFile = "data/interactions-present-in-data.txt"
+interactionFile = paste(PROJ_DIR,"/data/interactions-present-in-data.txt",sep='',collapse=''))
 
 if (length(args) > 1) {
     inFile = args[2]
 } else {
-    inFile = 'data/Table-S1-discrete-3.csv'
+    inFile = paste(PROJ_DIR,'/data/Table-S1-discrete-3.csv',sep='',collapse='')
+}
+
+workDir = paste(pathAndName(inFile)[1],'/work')
+if (!file.exists(workDir)) {
+    dir.create(workDir)
 }
 
 dat = read.csv(inFile,stringsAsFactors=FALSE)
@@ -102,7 +109,7 @@ projRoot = "/home/jk/JKSync/jk/BINF/5353/GRNs"
 
 # Write a trajectory to a file.
 writeTrajectory = function(tStr,dirName,tFname) {
-    mainDir = paste(projRoot,"/work",collapse="",sep="")
+    mainDir = workDir
     subDir = dirName
     if (file.exists(file.path(mainDir,subDir))) {
         setwd(file.path(mainDir,subDir))

@@ -1,11 +1,17 @@
+# Generate random and simulated expression data.
 if (!exists("util.util",mode="function")) {
     # print("Reading grn_util.r")
     source("r/grn_util.r")
 }
 
+# Gene statistics from the real data sets.
 geneStats = read.csv('data/geneStats.csv',sep=",",header=TRUE,stringsAsFactors=FALSE)
+
+# Interactions from FlyBase.
 interactionList = read.csv('data/interactions-present-in-data.txt',sep=',',header=FALSE,stringsAsFactors=FALSE)
 
+# Generate a random row of expression data with [replicates] measurements
+# for each cell type and region.
 randomGeneRow = function(n,replicates) {
     result = emptyRow(replicates)
 
@@ -15,9 +21,14 @@ randomGeneRow = function(n,replicates) {
     gene = sample(genes,1)
     grows = geneStats[geneStats[,'fbid']==gene,]
 
-    geneNm = paste("FBid100",n,sep="",collapse="")
-    cgNum = paste("CG10",n,sep="",collapse="")
-    result[1,1] = geneNm
+    rn = floor(runif(10000,100000000))
+
+    # We have to use the real FBids because we only test the
+    # interactions present in the FlyBase interactome.
+    fbId = gene
+    geneNm = gname(gene)
+    cgNum = paste("CG10",as.character(floor(runif(10000))),sep="",collapse="")
+    result[1,1] = fbId
     result[1,2] = cgNum
     result[1,3] = geneNm
     
@@ -32,13 +43,19 @@ randomGeneRow = function(n,replicates) {
             sdev = grow[,'sd']
             gmin = grow[,'min']
             gmax = grow[,'max']
+
+            # We don't care about this unless the rnorm() below
+            # is uncommented. Since there may be very few measurements
+            # within any give cluster, it's probably better to choose
+            # an expression level uniformly, rather than using any
+            # fancier distribution.
             if (is.na(sdev) || is.nan(sdev)) {
                 #print("CHANGING NaN sdev to 0.001")
                 sdev = 0.001
             }
 
-            # Hmm. MANY significant interactions using this.
-            # Maybe try just pure randomness...
+            # Choose an expression level uniformly at random from the
+            # measured range of this gene at the chosen level.
             expVal = runif(1,gmin,gmax)
 
             #expVal = rnorm(1,mean,sdev)
@@ -54,6 +71,7 @@ randomGeneRow = function(n,replicates) {
     return(result)
 }
 
+# Generate a number of random rows.
 generateRandomRows <- function(nGenes) {
     geneStats = read.csv('data/geneStats.csv',header=TRUE)
 
@@ -126,8 +144,9 @@ injectData2 <- function(dataFile,outFile,simFiles) {
         iRow = randomInteraction()
         g1 = iRow[1,1]
         g2 = iRow[1,2]
-        #cat("inject2 chose random genes",g1,g2,'\n')
-        interactions = rbind(interactions,list(g1,g2))
+        cat("inject2 chose random genes",g1,g2,'\n')
+        interactions = rbind(interactions,iRow)
+        interactions = rbind(interactions,list(g2,g1))
         nreps = floor(ncol(dat))/20
         for (cellType in c('EC','EE','EB','ISC')) {
             for (region in c('R1','R2','R3','R4','R5')) {
@@ -242,7 +261,10 @@ if (length(args) > 0) {
     if (args[1] == 'inject') {
         cat("Injecting simulated interactions",args[-1:-3],"into",args[2],"and writing result as",args[3],"\n")
         simulated_interactions = injectData2(args[2],args[3],args[-1:-3])
-        write.table(simulated_interactions,file=paste("simint-",args[3],sep='',collapse=''),sep=',',quote=FALSE,col.names=FALSE,row.names=FALSE)
+        pathParts = pathAndName(args[3])
+        baseDir = paste(pathParts[1],collapse='/',sep='/')
+        simintFile = paste(baseDir,'/','simint-',pathParts[2],collapse='',sep='')
+        write.table(simulated_interactions,file=simintFile,sep=',',quote=FALSE,col.names=FALSE,row.names=FALSE)
         cat("Done.")
     }
 }
