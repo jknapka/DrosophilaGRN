@@ -1,4 +1,10 @@
+#!/bin/bash
 # Source the setup.sh script before running this.
+
+if [ "" = "${PROJ_DIR}" ] ; then 
+    echo PROJ_DIR is not set.
+    exit 1 
+fi
 
 # Run all the comparisons in a given directory.
 # arg[0] is the name of the directory under work/
@@ -11,7 +17,15 @@
 # results are written to out/arg[0].out
 
 TDIR_LEAF=$1
-TDIR=${PROJ_DIR}/work/${TDIR_LEAF}
+if ! grep -q '/' <(echo $TDIR_LEAF) ; then
+    TDIR=${PROJ_DIR}/work/${TDIR_LEAF}
+else
+    TDIR=${TDIR_LEAF}
+    TDIR_LEAF=$(basename $TDIR)
+fi
+
+OUT_DIR=${TDIR}/../../out
+if [ ! -d $OUT_DIR ] ; then rm -f $OUT_DIR ; mkdir -p $OUT_DIR ; fi
 
 PMODE=3
 if [ ! "" == "$2" ] ; then PMODE=$2 ; fi
@@ -53,10 +67,14 @@ if [ ! $nT1FILES -eq $nT2FILES ] ; then
 fi
 
 CPX2_NOTHING=10
-OUT_FILE=${PROJ_DIR}/out/${TDIR_LEAF}-P${PMODE}.out
+OUT_FILE=${OUT_DIR}/${TDIR_LEAF}-P${PMODE}.out
 if [ -e ${OUT_FILE} ] ; then rm -f ${OUT_FILE} ; fi
 
-echo Relation,FBidA,FBidB,Celltype,pd,pc,pt,pz\(1\),pz\(2\)
+# This is the header for a CSV that gets written to stdout. We use
+# "pd", the differential p-value, as the value to do Benjamini-Hochberg
+# correction.
+echo Relation,FBidA,FBidB,Celltype,p.value,pc,pt,pz.1,pz.2
+
 for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
     T2FILES[$ff]=${TDIR}/$(basename ${T1FILES[$ff]} "${TDIR_LEAF}.trj")__X__${TDIR_LEAF}.trj
     #echo $ff : Comparing ${T1FILES[$ff]} vs ${T2FILES[$ff]}
@@ -66,11 +84,12 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
 
     # Collect glnsp output into a temp file.
     TEMP_FILE=$(tempfile -d .)
-    ${PROJ_DIR}/bin/glnsp -M comparison -P $PMODE -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]} > ${TEMP_FILE} 2>&1
+    ${PROJ_DIR}/bin/glnsp -M comparison -A 1.0 -P $PMODE -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]} > ${TEMP_FILE} 2>&1
 
     # If there is more output than the "no significant results" boilerplate,
     # grep the array for the relationships of interest.
-    if [  $(wc -l ${TEMP_FILE} | awk '{print $1}') -gt ${CPX2_NOTHING} ] ; then
+    # if [  $(wc -l ${TEMP_FILE} | awk '{print $1}') -gt ${CPX2_NOTHING} ] ; then
+    if [ "x" == "x" ] ; then
         echo ================================================================= >> ${OUT_FILE}
         echo $ff : Comparing ${T1FILES[$ff]} vs ${T2FILES[$ff]} >> ${OUT_FILE}
         echo ${PROJ_DIR}/bin/glnsp -M comparison -P $PMODE -p 1 -g 1 -K 0 -J 0   -1 ${T1FILES[$ff]} -2 ${T2FILES[$ff]} \> ${TEMP_FILE} 2\>\&1 >> ${OUT_FILE}
@@ -78,6 +97,8 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
         FBIDS="$(basename ${T1FILES[$ff]} .trj | tr - , )"
         PVALS=($(egrep -o "p[a-z]+=[0-9.e-]+" ${TEMP_FILE} | head -5 | egrep -o "[-.0-9e]+" | tr \  ,))
         PVALS=$(echo ${PVALS[@]} | tr \  ,)
+
+        if [ "" == "${PVALS}" ] ; then PVALS=1.0,1.0,1.0,1.0,1.0 ; fi
 
         echo "" >> ${OUT_FILE}
         echo TRAJECTORIES: >> ${OUT_FILE}
@@ -117,4 +138,5 @@ for ((ff=0; $ff<${nT1FILES}; ++ff)) ; do
     fi
     rm $TEMP_FILE
 done
+
 

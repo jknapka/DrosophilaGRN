@@ -29,20 +29,22 @@ if (!exists("util.util",mode="function")) {
 args <- commandArgs(trailingOnly=TRUE)
 print(args)
 
-interactionFile = paste(PROJ_DIR,"/data/interactions-present-in-data.txt",sep='',collapse=''))
+interactionFile = paste(PROJ_DIR,"/data/interactions-present-in-data.txt",sep='',collapse='')
 
 if (length(args) > 1) {
     inFile = args[2]
 } else {
-    inFile = paste(PROJ_DIR,'/data/Table-S1-discrete-3.csv',sep='',collapse='')
+    inFile = paste(PROJ_DIR,'/data/Table-S1-discrete-3-9.csv',sep='',collapse='')
 }
 
-workDir = paste(pathAndName(inFile)[1],'/work')
+workDir = paste(pathAndName(inFile)[1],'/work',sep='',collapse='')
 if (!file.exists(workDir)) {
     dir.create(workDir)
 }
 
-dat = read.csv(inFile,stringsAsFactors=FALSE)
+dat = read.csv(inFile,stringsAsFactors=FALSE,header=T)
+cat("Read input file",inFile,'\n')
+#print(dat)
 interactions = read.table(interactionFile,header=FALSE,sep=",",stringsAsFactors=FALSE)
 
 # The pattern (regexp) that determines which columns we
@@ -59,10 +61,10 @@ appendToAString = function(s,obj) {
 # Build a TRAJECTORY_VER2 string describing the network
 # trajectory among the given data rows. Rows are gene
 # IDs, columns are experimental conditions, timesteps, etc.
-buildTrajectory = function(rows) {
+buildTrajectory = function(rows,levels.1,levels.2) {
     result = "TRAJECTORY_VER2\n"
     result = appendToAString(result,"1 2 0\n")
-    result = appendToAString(result,"3\t3\n")
+    result = appendToAString(result,paste(levels.1,"\t",levels.2,"\n"))
     result = appendToAString(result,rows[1,1])
     result = appendToAString(result,"\t")
     result = appendToAString(result,rows[2,1])
@@ -76,24 +78,32 @@ buildTrajectory = function(rows) {
         result = appendToAString(result,rows[2,col]-1)
         result = appendToAString(result,"\n")
     }
+    cat("*******\nTrajectory",'\n',result,'\n for rows\n')
+    print(rows)
+    cat("*******\n\n")
     return(result)
 }
 
 # Select the columns that match or do not match a
 # particular regexp.
 selectClass = function(df,fbgns,colPattern,complement=FALSE) {
-    result1 = df[df[,2] == fbgns[1],c(2,grep(colPattern,names(df),invert=complement))]
-    result2 = df[df[,2] == fbgns[2],c(2,grep(colPattern,names(df),invert=complement))]
+    result1 = df[df[,1] == fbgns[1],c(1,grep(colPattern,names(df),invert=complement))]
+    result2 = df[df[,1] == fbgns[2],c(1,grep(colPattern,names(df),invert=complement))]
     result = rbind(result1,result2)
-    result = result[,names(result) != "FBgn.1"]
-    result = result[,names(result) != "X"]
+    result = result[,c(1,grep("EB|EE|EC|ISC",names(result)))]
+    cat("RESULT selecteClass",colPattern,fbgns,'\n')
+    print(result)
+    #result = result[,names(result) != "FBgn"]
+    #result = result[,names(result) != "CG.number"]
+    #result = result[,names(result) != "Gene.ID"]
+    #result = result[,names(result) != "X"]
     return(result)
 }
 
 # Compute the filename to which a trajectory will be written.
 trajectoryFname = function(fbgns,colPattern,complement=FALSE) {
-    geneNames = c(gname(fbgns[1,1]),gname(fbgns[1,2]))
-    cat("Gene names for ",fbgns[1,1],fbgns[1,2]," = ",geneNames[1],geneNames[2],"\n")
+    geneNames = c(fbgns[1,1],fbgns[1,2])
+    #cat("Gene names for ",fbgns[1,1],fbgns[1,2]," = ",geneNames[1],geneNames[2],"\n")
     fName = paste(geneNames,collapse="-",sep="-")
     patPart = colPattern
     if (complement) {
@@ -102,10 +112,6 @@ trajectoryFname = function(fbgns,colPattern,complement=FALSE) {
     fName = paste(fName,patPart,collapse="-",sep="-")
     fName = paste(fName,".trj",collapse="",sep="")
 }
-
-# Root of the project tree - BAD! Don't hard-code this,
-# use an environment variable.
-projRoot = "/home/jk/JKSync/jk/BINF/5353/GRNs"
 
 # Write a trajectory to a file.
 writeTrajectory = function(tStr,dirName,tFname) {
@@ -122,22 +128,38 @@ writeTrajectory = function(tStr,dirName,tFname) {
     write(tStr,fconn)
     close(fconn)
 
-    setwd(file.path(mainDir,".."))
+    setwd(PROJ_DIR)
 }
 
+getMaxLevels <- function(df,fbid.1,fbid.2) {
+    #cat("Finding levels",fbid.1,fbid.2,'\n')
+    dataColumns = grep("^EB|^EC|^EE|^ISC",names(df))
+    result1 = df[df[,1] == fbid.1,dataColumns]
+    result2 = df[df[,1] == fbid.2,dataColumns]
+    levels.1 = unique(result1[1,-1:-3])
+    levels.1 = max(levels.1)
+    levels.2 = unique(result2[1,-1:-3])
+    levels.2 = max(levels.2)
+    #cat("Levels:",fbid.1,levels.1,fbid.2,levels.2,'\n')
+    return(c(levels.1,levels.2))
+}
 # Process all interactions.
 for (ii in 1:nrow(interactions)) {
     vinter = as.character(interactions[ii,])
+    #cat("vinter is",vinter,'\n')
     cat(paste(c("Processing interaction ",vinter,"\n"),sep=" ",collapse=" "))
+    levels = getMaxLevels(dat,vinter[1],vinter[2])
     c1 = selectClass(dat,vinter,classPattern)
+    #print(classPattern)
+    #print(c1)
     c2 = selectClass(dat,vinter,classPattern,complement=TRUE)
-    t1 = buildTrajectory(c1)
-    t2 = buildTrajectory(c2)
+    #cat(classPattern,"INVERTED\n")
+    #print(c2)
+    t1 = buildTrajectory(c1,levels[1],levels[2])
+    t2 = buildTrajectory(c2,levels[1],levels[2])
     tFname1 = trajectoryFname(interactions[ii,],classPattern,complement=FALSE)
     tFname2 = trajectoryFname(interactions[ii,],classPattern,complement=TRUE)
     writeTrajectory(t1,classPattern,tFname1)
     writeTrajectory(t2,classPattern,tFname2)
 }
-
-cat("Done with the loop")
 

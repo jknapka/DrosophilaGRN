@@ -13,17 +13,17 @@ if (length(args) > 0) {
     inFile <- args[1]
     gsFile <- paste(substring(inFile,1,stringr::str_length(inFile)-4),"-geneStats.csv",sep="",collapse="")
     if (length(args) > 1) {
-        simulated_interactions = read.csv(args[2],sep=',',header=FALSE)
+        simulated_interactions = read.csv(args[2],sep=',',header=FALSE,col.names=c('FBid1','FBid2'))
     } else {
         simulated_interactions = NULL
     }
 
 } else {
-    inFile <- paste(PROJ_DIR,'/data/Table-S1.csv')
-    gsFile <- paste(PROJ_DIR,'/data/geneStats.csv')
+    inFile <- paste(PROJ_DIR,'/data/Table-S1.csv',sep="",collapse="")
+    gsFile <- paste(PROJ_DIR,'/data/geneStats.csv',sep="",collapse="")
     simulated_interactions = NULL
 }
-interactionFile <- paste(PROJ_DIR,'/data/interactions-present-in-data.txt')
+interactionFile <- paste(PROJ_DIR,'/data/interactions-present-in-data.txt',sep="",collapse="")
 
 inTab <- read.csv(inFile,stringsAsFactors=FALSE)
 nr = nrow(inTab)
@@ -86,11 +86,11 @@ symbols.by.region = c(rep(c(rep('1',nReplicates),rep('2',nReplicates),rep('3',nR
 pthNm = pathAndName(inFile)
 pth = pthNm[1]
 nm = substring(pthNm[2],1,stringr::str_length(pthNm[2])-4)
-write.csv(outTab,paste(pth,'/',nm,"-discrete-",nClusters[1],"-",nClusters[length(nClusters)],".csv",sep="",collapse=""))
+write.csv(outTab,paste(pth,'/',nm,"-discrete-",nClusters[1],"-",nClusters[length(nClusters)],".csv",sep="",collapse=""),row.names=F)
 
 geneStats = geneStats[order(geneStats[,'fbnum'],geneStats[,'level']),]
 geneStats = geneStats[,-1]
-write.csv(geneStats,gsFile,row.names=FALSE,col.names=TRUE)
+write.csv(geneStats,gsFile,row.names=FALSE)
 
 interactions = read.table(interactionFile,header=FALSE,sep=",",stringsAsFactors=FALSE)
 
@@ -166,55 +166,21 @@ cat("p.values",p.values)
 #cat("adjusted p.values",p.values)
 
 interactions[['p.value']] <- p.values
-interactions[['BH.significant']] <- rep(FALSE,nrow(interactions))
-interactions[['simulated']] <- rep(FALSE,nrow(interactions))
 
-if (!is.null(simulated_interactions)) {
-    for (jj in 1:nrow(interactions)) {
-        for (kk in 1:nrow(simulated_interactions)) {
-            if ((interactions[jj,1] == simulated_interactions[kk,1]) &&
-                (interactions[jj,2] == simulated_interactions[kk,2])) {
-                interactions[jj,'simulated'] <- TRUE
-            }
-        }
-    }
-}
+interactions = addSimulationFlag(interactions,simulated_interactions)
 
-roc.data = data.frame(FDR=numeric(0),true.positives=numeric(0),true.proportion=numeric(0),false.positives=numeric(0),false.proportion=numeric(0))
-for (BH.alpha in c(0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) {
-    sorted.interactions = fdr_BH(interactions,BH.alpha=BH.alpha)
+# Write out the ROC data.
+pathParts = pathAndName(inFile)
+baseDir = paste(pathParts[1],collapse='/',sep='/')
 
-    sorted.interactions[['n']] = 1:nrow(sorted.interactions)
-
-    print("Adjusted interaction significance:")
-    print(sorted.interactions)
-
-    pathParts = pathAndName(inFile)
-    baseDir = paste(pathParts[1],collapse='/',sep='/')
-    resultFile = paste(baseDir,'/','results.csv',collapse='',sep='')
-    write.table(sorted.interactions,file=resultFile,sep=',',quote=FALSE,col.names=TRUE,row.names=FALSE)
-
-    true.positives = nrow(sorted.interactions[sorted.interactions[,'BH.significant'] & sorted.interactions[,'simulated'],])
-    n.true = nrow(sorted.interactions[sorted.interactions[,'simulated'],])
-    false.positives = nrow(sorted.interactions[sorted.interactions[,'BH.significant'] & !sorted.interactions[,'simulated'],])
-    n.false = nrow(sorted.interactions)-n.true
-
-    pTrue = true.positives/n.true
-    pFalse = false.positives/n.false
-
-    cat("lengths: BH.alpha",length(BH.alpha),"true.positives",length(true.positives),"true.proportion",length(pTrue),
-        "false.positives",length(false.positives),"false.proportion",length(pFalse))
-    roc.row = list(FDR=BH.alpha,true.positives=true.positives,true.proportion=pTrue,false.positives=false.positives,false.proportion=pFalse)
-
-    print("trying to rbind")
-    print(roc.data)
-    print("   to")
-    print(roc.row)
-    flush.console()
-
-    roc.data = rbind(roc.data,roc.row)
-}
+roc.list = buildROC(interactions)
+roc.data = roc.list[['ROC']]
 write.table(roc.data,file=paste(baseDir,'/','rocdat.csv',sep='',collapse=''),sep=',',quote=FALSE,col.names=TRUE,row.names=FALSE)
+
+# Write out the interaction data.
+sorted.interactions = roc.list[['interactions']][3]
+resultFile = paste(baseDir,'/','results.csv',collapse='',sep='')
+write.table(sorted.interactions,file=resultFile,sep=',',quote=FALSE,col.names=TRUE,row.names=FALSE)
 
 plotRocFromTable(roc.data)
 
