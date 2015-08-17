@@ -14,7 +14,9 @@ export GENERATION_METHOD
 
 pushd ${PROJ_DIR}
 
-./sh/conserved-roc.sh $N_RELATIONS $SIM_PLAN > work/${GENERATION_METHOD}-${REPLICATES}-${N_RELATIONS}-${SIM_PLAN}.out 2>&1
+PLAN_TAG=$(basename $SIM_PLAN .csv)
+
+./sh/conserved-roc.sh $N_RELATIONS $SIM_PLAN > work/${GENERATION_METHOD}-${REPLICATES}-${N_RELATIONS}-${PLAN_TAG}.out 2>&1
 
 popd
 

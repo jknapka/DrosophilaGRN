@@ -7,10 +7,17 @@ if [ "" = "${PROJ_DIR}" ] ; then
 fi
 
 # Run all the comparisons in a given directory.
-# arg[0] is the name of the directory under work/
-# that contains the # trajectory files, such as "R1"
-# if the directory is work/R1. Each trajectory file whose
-# name fits the pattern FBgbX-FBgnY-arg[0].trj will
+# arg[0] is the name of the directory
+# that contains the trajectory files, such as "work/sim1/EC".
+# The cell type (EB, ISC, etc) or region tag (R!..R5)
+# is taken from the leaf directory of the path (so EC
+# in the example above.)
+# It is best to give the full path to the directory
+# containing the trajectory files to be analyzed.
+# Otherwise, arg[0] is the name of a leaf directory
+# under $PROJ_DIR/work.
+# Each trajectory file whose
+# name fits the pattern FBgbX-FBgnY-[cell type or region].trj will
 # be compared with the dual trajectory file named
 # FBgnX-FBgnY-__X__arg[0].trj. When CPX2 outputs
 # "interesting" (non-conserved) results, those
