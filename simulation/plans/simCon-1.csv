@@ -1,0 +1,6 @@
+cellType,level,maxlevel,tlevel,maxtlevel,noise
+OTHER,1,5,5,5,0.2
+OTHER,2,5,4,5,0.2
+OTHER,3,5,3,5,0.2
+OTHER,4,5,2,5,0.2
+OTHER,5,5,1,5,0.2
