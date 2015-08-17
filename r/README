@@ -1,0 +1,17 @@
+These programs require the following packages:
+
+pracma
+stringr
+FunChisq
+Ckmeans.1d.dp
+
+Files:
+
+grn_util.r - Utility functions. FDR, ROC generation, etc.
+
+conserved-interactions.r - Use FunChisq to detect conserved functional interactions.
+
+unique-interactions.r - Generate trajectory files for input to GLN to detect differential interactions.
+
+randomGeneRow.r - Generate randomized expression datasets, and inject simulated interactions.
+
