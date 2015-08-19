@@ -21,7 +21,7 @@ You need a file called ./data/interactions-present-in-data.txt, which is
 really a comma-separated file with two fields per line. Each line names
 two genes that interact.
 
-The code for converting gene IDs to names in r/gen_util.r depends on some
+The code for converting gene IDs to names in r/grn_util.r depends on some
 data that is not present here. It probably isn't really necessary and
 references to the gname() function should be removed.
 
