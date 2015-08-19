@@ -8,6 +8,23 @@ is available in the dataset for cell types named "EB", "EC", "EE", and
 selecting data columns of interest using a regular expression that can be
 customized for any dataset.
 
+There is no real data for analysis in this repository, because the data
+I analyzed had not been published at the time I was doing this work. To
+be useful, you will need to create a ./data directory and put some things
+there.
+
+Some of this code assumes that the "real" data lives in a table called
+./data/Table-S1.csv. Most things can take an argument to specify the table
+to process, however.
+
+You need a file called ./data/interactions-present-in-data.txt, which is
+really a comma-separated file with two fields per line. Each line names
+two genes that interact.
+
+The code for converting gene IDs to names in r/gen_util.r depends on some
+data that is not present here. It probably isn't really necessary and
+references to the gname() function should be removed.
+
 You will need to build a recent version of GLN (executable name glnsp) and
 place glnsp in ./bin/
 
