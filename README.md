@@ -2,6 +2,9 @@
 Code for analyzing Drosophila transcriptome data and simulating expression data for
 regulatory interactions between genes.
 
+All code in this tree expects the environment variable PROJ_DIR to
+be set to the full path of the directory containing this README.md file.
+
 There is quite a bit of code in here that assumes that expression data
 is available in the dataset for cell types named "EB", "EC", "EE", and
 "ISC". In retrospect, this was unwise! The solution probably involves
@@ -58,6 +61,12 @@ OTHER,       3,        3,           1,         2,            1.0
 OTHER,       4,        4,           1,         2,            1.0
 OTHER,       5,        5,           1,         2,            1.0
 ```
+
+To begin implementing a simulation plan, source and target gene expression
+profiles are chosen at random from the genes present in the original
+"real" dataset. (The expression profiles are written out by
+conserved-interactions.r to a file called data/geneStats.csv. That
+has to happen before a simulation can be run.)
 
 The columns are the cell type, source gene level, maximum source gene level,
 target level to use when the interaction is simulated for the corresponding
