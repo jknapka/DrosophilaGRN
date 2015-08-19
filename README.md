@@ -70,12 +70,21 @@ of the selected target gene by interpolation from the range [1..maxlevel]).
 The target gene's level will be set to the corresponding tlevel value
 (interpolated from the range [1..maxtlevel], and the "house noise" model
 will be applied to possibly change the target level according to the
-value in the noise column.
+value in the noise column. The finctional relationship indicated by this
+plan for EB cells is:
+
+1/3 -> 1/10
+2/3 -> 3/10
+3/3 -> 10/10
+
+which will subsequently be linearly interpolated to the range of levels 
+actually discovered by Ckmeans for randomly-selected source and target
+genes in the "real" data.
 
 When simulating expression data for any other cell type, the OTHER row
 is used. A source level is chosen at random, and the target level is
 always 1. However, since the noise value is 1.0, the effect is that a
 level will be chosen uniformly at random from the target gene's range
 of quantized levels. Thus, this plan simulates an interaction with a
-strong signal for EB cells, and random expression data for all other
-cell types.
+strong exponential-shaped signal for EB cells, and random expression data
+for all other cell types.
