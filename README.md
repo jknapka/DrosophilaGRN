@@ -81,11 +81,11 @@ The target gene's level will be set to the corresponding tlevel value
 will be applied to possibly change the target level according to the
 value in the noise column. The finctional relationship indicated by this
 plan for EB cells is:
-
+```
 1/3 -> 1/10
 2/3 -> 3/10
 3/3 -> 10/10
-
+```
 which will subsequently be linearly interpolated to the range of levels 
 actually discovered by Ckmeans for randomly-selected source and target
 genes in the "real" data.
