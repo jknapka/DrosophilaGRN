@@ -30,6 +30,7 @@ simulation/plans contains simulation plans that can be used with
 The comment for the injectData2 function in r/randomGeneRow.r explains the format 
 of a simulation plan file. Briefly,here is a simulation plan:
 
+```
 celltype,    level,    maxlevel,    tlevel,    maxtlevel,    noise
 EB,          1,        3,           1,         10,           0.2
 EB,          2,        3,           2,         10,           0.2
@@ -39,6 +40,7 @@ OTHER,       2,        2,           1,         2,            1.0
 OTHER,       3,        3,           1,         2,            1.0
 OTHER,       4,        4,           1,         2,            1.0
 OTHER,       5,        5,           1,         2,            1.0
+```
 
 The columns are the cell type, source gene level, maximum source gene level,
 target level to use when the interaction is simulated for the corresponding
