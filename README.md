@@ -15,7 +15,10 @@ and also scripts to perform various simulations. sh/all-sims.sh runs a large num
 simulations with different parameters. Results end up in work/conserved-ROC (even though
 much of the analysis is actuall concerned with detecting differential interactions).
 
-simulation/  contains obsolete Python code to build simulated data sets. It is
+simulation/  contains obsolete Python code to build simulated data sets. That code is
 all superseded by r/randomGeneRow.r
 
-
+simulation/plans contains simulation plans that can be used with
+"r/randomGeneRow.r inject" to add known interactions to a randomized dataset.
+The comment for the injectData2 function in r/randomGeneRow.r explains the format 
+of a simulation plan file.
