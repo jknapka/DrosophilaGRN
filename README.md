@@ -28,7 +28,7 @@ all superseded by r/randomGeneRow.r
 simulation/plans contains simulation plans that can be used with
 "r/randomGeneRow.r inject" to add known interactions to a randomized dataset.
 The comment for the injectData2 function in r/randomGeneRow.r explains the format 
-of a simulation plan file. Briefly,here is a simulation plan:
+of a simulation plan file.  Briefly,here is a simulation plan:
 
 ```
 celltype,    level,    maxlevel,    tlevel,    maxtlevel,    noise
