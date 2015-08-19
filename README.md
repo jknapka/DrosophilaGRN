@@ -48,7 +48,8 @@ all superseded by r/randomGeneRow.r
 simulation/plans contains simulation plans that can be used with
 "r/randomGeneRow.r inject" to add known interactions to a randomized dataset.
 The comment for the injectData2 function in r/randomGeneRow.r explains the format 
-of a simulation plan file.  Briefly,here is a simulation plan:
+of a simulation plan file.  Briefly,here is a simulation plan which will be
+explained below:
 
 ```
 celltype,    level,    maxlevel,    tlevel,    maxtlevel,    noise
@@ -62,15 +63,17 @@ OTHER,       4,        4,           1,         2,            1.0
 OTHER,       5,        5,           1,         2,            1.0
 ```
 
+The columns are the cell type, source gene level, maximum source gene level,
+target level to use when the interaction is simulated for the corresponding
+source level, maximum target level, and "house noise" level.
+
 To begin implementing a simulation plan, source and target gene expression
 profiles are chosen at random from the genes present in the original
 "real" dataset. (The expression profiles are written out by
 conserved-interactions.r to a file called data/geneStats.csv. That
-has to happen before a simulation can be run.)
-
-The columns are the cell type, source gene level, maximum source gene level,
-target level to use when the interaction is simulated for the corresponding
-source level, maximum target level, and "house noise" level.
+has to happen before a simulation can be run.) Then source and target
+gene IDs are chosen from the simulated dataset; the data for these genes
+will be overwritten by the simulated expression values.
 
 When simulating expression data for a cell of type EB, a random row from
 the celltype=EB rows will be chosen. The source gene's level will be set
