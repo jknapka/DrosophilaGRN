@@ -1,3 +1,5 @@
+You will need R version 3.1.2 or higher.
+
 These programs require the following packages:
 
 pracma
@@ -7,11 +9,11 @@ Ckmeans.1d.dp
 
 Files:
 
-grn_util.r - Utility functions. FDR, ROC generation, etc.
+* grn_util.r - Utility functions. FDR, ROC generation, etc.
 
-conserved-interactions.r - Use FunChisq to detect conserved functional interactions.
+* conserved-interactions.r - Use FunChisq to detect conserved functional interactions.
 
-unique-interactions.r - Generate trajectory files for input to GLN to detect differential interactions.
+* unique-interactions.r - Generate trajectory files for input to GLN to detect differential interactions.
 
-randomGeneRow.r - Generate randomized expression datasets, and inject simulated interactions.
+* randomGeneRow.r - Generate randomized expression datasets, and inject simulated interactions.
 
