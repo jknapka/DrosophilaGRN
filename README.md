@@ -79,16 +79,16 @@ of the selected target gene by interpolation from the range [1..maxlevel]).
 The target gene's level will be set to the corresponding tlevel value
 (interpolated from the range [1..maxtlevel], and the "house noise" model
 will be applied to possibly change the target level according to the
-value in the noise column. The finctional relationship indicated by this
+value in the noise column. The functional relationship indicated by this
 plan for EB cells is:
 ```
-1/3 -> 1/10
-2/3 -> 3/10
-3/3 -> 10/10
+1/3 -> 1/10          0.333 -> 0.1
+2/3 -> 3/10   (or)   0.667 -> 0.3
+3/3 -> 10/10         1.0   -> 1.0
 ```
 which will subsequently be linearly interpolated to the range of levels 
-actually discovered by Ckmeans for randomly-selected source and target
-genes in the "real" data.
+actually discovered by Ckmeans for the source and target genes in the
+"real" dataset.
 
 When simulating expression data for any other cell type, the OTHER row
 is used. A source level is chosen at random, and the target level is
